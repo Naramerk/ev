@@ -581,51 +581,6 @@ def column_mutate_dist(individual, mutation_prob=0.3,
     
     return creator.Individual(mutated.flatten().tolist()),
 
-def column_mutate_shuffle(individual, mutation_prob=0.3,
-                         categorical_idx=None, continuous_idx=None, cat_probs=None, n_features=None):
-    """
-    Column-wise mutation: Shuffle values within columns.
-    
-    Parameters:
-    -----------
-    individual : list
-        Flattened data to mutate
-    mutation_prob : float
-        Probability of mutating each column
-    categorical_idx : list
-        Indices of categorical features
-    continuous_idx : list
-        Indices of continuous features
-    cat_probs : list
-        Probability distributions for categorical features
-    n_features : int
-        Number of features
-        
-    Returns:
-    --------
-    tuple
-        Mutated individual
-    """
-    # Reshape individual to 2D
-    individual_data = np.array(individual).reshape(-1, n_features)
-    mutated = individual_data.copy()
-    
-    # Get all column indices
-    all_cols = list(range(n_features))
-    
-    # Shuffle selected columns
-    for j in all_cols:
-        if random.random() <= mutation_prob:
-            # Get column and shuffle it
-            col = mutated[:, j].copy()
-            np.random.shuffle(col)
-            mutated[:, j] = col
-    
-    # Replace any NaN values
-    mutated = np.nan_to_num(mutated)
-    
-    return creator.Individual(mutated.flatten().tolist()),
-
 def custom_crossover(ind1, ind2, cxpb=0.6, row_mode_prob=0.5, n_features=None):
     """
     Custom crossover that can work on rows or columns.
