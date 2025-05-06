@@ -1,9 +1,7 @@
-from bamt.networks.hybrid_bn import HybridBN
+import numpy as np
+import random
 import pandas as pd
-import logging
-from bamt.preprocess.discretization import code_categories, get_nodes_type
-from bamt.networks.continuous_bn import ContinuousBN
-from bamt.networks.discrete_bn import DiscreteBN
+from deap import creator
 
 # Row-wise mutation operators
 def custom_mutate_noise(individual, mutation_prob=0.3, noise_scale=0.1, 
@@ -447,7 +445,6 @@ def custom_mutate_bn(individual, mutation_prob=0.3,
 
                         # Replace NaN values
                         mutated = np.nan_to_num(mutated)
-                        print('mutated.head(5)2', mutated)
 
                         # Ensure categorical values remain integers
                         if categorical_idx:
@@ -457,7 +454,6 @@ def custom_mutate_bn(individual, mutation_prob=0.3,
                                 
                                 # Optional: ensure values are valid categories (assuming binary 0/1 classification)
                                 mutated[:, cat_idx] = np.clip(mutated[:, cat_idx], 0, 1)
-                        print('mutated.head(5)3', mutated)
                         return creator.Individual(mutated.flatten().tolist()),
 
             except Exception as e:
@@ -529,10 +525,91 @@ def column_mutate_noise(individual, mutation_prob=0.3, noise_scale=0.1,
     
     return creator.Individual(mutated.flatten().tolist()),
 
-def column_mutate_dist(individual, mutation_prob=0.3,
+def column_mutate_dist(individual, mutation_prob=0.3, gmm=None,
                       categorical_idx=None, continuous_idx=None, cat_probs=None, n_features=None):
     """
-    Column-wise mutation: Replace entire columns with values from marginal distributions.
+    Column-wise mutation: Replace entire columns with values from learned distributions.
+    
+    Parameters:
+    -----------
+    individual : list
+        Flattened data to mutate
+    mutation_prob : float
+        Probability of mutating each column
+    gmm : GaussianMixture
+        Gaussian Mixture model for sampling continuous features
+    categorical_idx : list
+        Indices of categorical features
+    continuous_idx : list
+        Indices of continuous features
+    cat_probs : list
+        Probability distributions for categorical features
+    n_features : int
+        Number of features
+        
+    Returns:
+    --------
+    tuple
+        Mutated individual
+    """
+    # Reshape individual to 2D
+    individual_data = np.array(individual).reshape(-1, n_features)
+    mutated = individual_data.copy()
+    n_samples = len(individual_data)
+    
+    # Replace continuous columns with probability mutation_prob
+    if continuous_idx and gmm and random.random() <= mutation_prob:
+        try:
+            # Generate samples from GMM
+            new_samples = gmm.sample(n_samples)[0]
+            
+            # Replace each continuous column that should be mutated
+            for idx, col_idx in enumerate(continuous_idx):
+                if random.random() <= mutation_prob and idx < new_samples.shape[1]:
+                    mutated[:, col_idx] = new_samples[:, idx]
+        except Exception as e:
+            print(f"Error in GMM sampling for column mutation: {e}")
+            # Fallback to simple distribution
+            for j in continuous_idx:
+                if random.random() <= mutation_prob:
+                    # Compute column statistics
+                    col_mean = np.mean(mutated[:, j])
+                    col_std = np.std(mutated[:, j])
+                    
+                    # Generate new column from normal distribution
+                    mutated[:, j] = np.random.normal(col_mean, col_std, n_samples)
+    
+    # Handle categorical columns
+    if categorical_idx and cat_probs:
+        for idx, cat_idx in enumerate(categorical_idx):
+            if idx < len(cat_probs) and random.random() <= mutation_prob:
+                # Replace entire column with new samples
+                mutated[:, cat_idx] = np.random.choice(
+                    len(cat_probs[idx]), 
+                    size=n_samples, 
+                    p=cat_probs[idx]
+                )
+    
+    # Replace any NaN values
+    mutated = np.nan_to_num(mutated)
+    
+    # Ensure categorical features are integers
+    if categorical_idx:
+        for cat_idx in categorical_idx:
+            # Round to nearest integer
+            mutated[:, cat_idx] = np.round(mutated[:, cat_idx]).astype(int)
+            
+            # Optional: ensure values are valid categories (assuming binary 0/1 classification)
+            mutated[:, cat_idx] = np.clip(mutated[:, cat_idx], 0, 1)
+    
+    return creator.Individual(mutated.flatten().tolist()),
+
+
+
+def column_mutate_shuffle(individual, mutation_prob=0.3,
+                         categorical_idx=None, continuous_idx=None, cat_probs=None, n_features=None):
+    """
+    Column-wise mutation: Shuffle values within columns.
     
     Parameters:
     -----------
@@ -557,29 +634,17 @@ def column_mutate_dist(individual, mutation_prob=0.3,
     # Reshape individual to 2D
     individual_data = np.array(individual).reshape(-1, n_features)
     mutated = individual_data.copy()
-    n_samples = len(individual_data)
     
-    # Replace continuous columns with probability mutation_prob
-    if continuous_idx:
-        for j in continuous_idx:
-            if random.random() <= mutation_prob:
-                # Compute column statistics
-                col_mean = np.mean(mutated[:, j])
-                col_std = np.std(mutated[:, j])
-                
-                # Generate new column from normal distribution
-                mutated[:, j] = np.random.normal(col_mean, col_std, n_samples)
+    # Get all column indices
+    all_cols = list(range(n_features))
     
-    # Handle categorical columns
-    if categorical_idx and cat_probs:
-        for idx, cat_idx in enumerate(categorical_idx):
-            if idx < len(cat_probs) and random.random() <= mutation_prob:
-                # Replace entire column with new samples
-                mutated[:, cat_idx] = np.random.choice(
-                    len(cat_probs[idx]), 
-                    size=n_samples, 
-                    p=cat_probs[idx]
-                )
+    # Shuffle selected columns
+    for j in all_cols:
+        if random.random() <= mutation_prob:
+            # Get column and shuffle it
+            col = mutated[:, j].copy()
+            np.random.shuffle(col)
+            mutated[:, j] = col
     
     # Replace any NaN values
     mutated = np.nan_to_num(mutated)
