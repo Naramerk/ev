@@ -27,11 +27,9 @@ def compute_meta_feature(data, meta_feature):
     """
     try:
         mfe = MFE(features=[meta_feature], summary=None)
-        #print(88888)
         # Make sure data is in numpy array format
         if isinstance(data, pd.DataFrame):
             data = data.values
-        #print(99999)
         # Ensure data is not empty and has at least 2 dimensions
         if data.size == 0 or data.ndim < 2:
             return np.nan
@@ -39,7 +37,6 @@ def compute_meta_feature(data, meta_feature):
         # Check if there's enough data for X and y
         if data.shape[1] < 2:
             return np.nan
-        #print(100000)
         # Ensure data is float type and replace any NaN values
         data = np.array(data)
         #print('data', data)
@@ -47,18 +44,13 @@ def compute_meta_feature(data, meta_feature):
                 
         X = data[:, :-1]
         y = data[:, -1]
-        #print('X', X)
-        #print(115511)
+ 
         # Check if there's any variation in the target
         if len(np.unique(y)) < 2:
             # If only one class, return a default value
             return 0.0
-        #print(115512)
         mfe.fit(X, y)
-        #print(mfe.extract())
         ft = mfe.extract()[1][0]
-        #print('ft', ft)
-        #print('type(ft)', type(ft))
         return ft
 
 
@@ -177,7 +169,7 @@ def generate_synthetic_data(
     init_val = 'a'
     fin_val = 'a'
     tar_val = target_meta_value
-
+    fit_value = float('inf')
     # Prepare data
     if isinstance(source_data, pd.DataFrame):
         # Store column names for later
@@ -256,7 +248,6 @@ def generate_synthetic_data(
             # Создаем пул сетей с разными структурами
             for i in range(7):  # Создаем 7 разных сетей
                 try:
-                    # Используем разные части данных для обучения
                     if len(df) > 500:
                         df_subset = df.sample(n=500, random_state=np.random.randint(0, 10000))
                     else:
@@ -310,7 +301,7 @@ def generate_synthetic_data(
         'n_features': n_features
     }
     # Only add gmm parameter for the operators that need it
-    if mutation_type == 'row_dist' and gmm is not None:
+    if mutation_type == 'row_dist' or mutation_type == 'col_dist' and gmm is not None:
         mutation_params['gmm'] = gmm
     
     # Add trained BNs parameter for row_bn operator
