@@ -7,7 +7,48 @@ import pandas as pd
 import numpy as np
 import json
 import os
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import os
+from sklearn.datasets import make_classification
+from sklearn.mixture import GaussianMixture
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error
+from pymfe.mfe import MFE
+from deap import base, creator, tools, algorithms
+from ForestDiffusion import ForestDiffusionModel
+import random
+import warnings
+from scipy.stats import wasserstein_distance
+from sklearn.decomposition import PCA
+from functools import partial
+import json
+from multiprocessing import Pool
+from bamt.networks import ContinuousBN
+import glob
+from sklearn.preprocessing import LabelEncoder
 
+
+plt.style.use('seaborn-v0_8-whitegrid')
+warnings.filterwarnings("ignore")
+
+# Clear any existing DEAP creator classes to avoid conflicts
+if hasattr(creator, "FitnessMin"):
+    del creator.FitnessMin
+if hasattr(creator, "Individual"):
+    del creator.Individual
+
+# Create DEAP classes at the module level
+creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
+creator.create("Individual", list, fitness=creator.FitnessMin)
+
+# Global variables for storing meta-feature values
+init_val = 'a'
+fin_val = 'a'
+tar_val = 'a'
+fit_value = float('inf')
 
 def run_shift_convergence_experiment(
     shift_type, 
@@ -52,6 +93,24 @@ def run_shift_convergence_experiment(
     dict
         Results dictionary
     """
+    plt.style.use('seaborn-v0_8-whitegrid')
+    warnings.filterwarnings("ignore")
+
+    # Clear any existing DEAP creator classes to avoid conflicts
+    if hasattr(creator, "FitnessMin"):
+        del creator.FitnessMin
+    if hasattr(creator, "Individual"):
+        del creator.Individual
+
+    # Create DEAP classes at the module level
+    creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
+    creator.create("Individual", list, fitness=creator.FitnessMin)
+
+    # Global variables for storing meta-feature values
+    init_val = 'a'
+    fin_val = 'a'
+    tar_val = 'a'
+    fit_value = float('inf')
     # Create output directory
     experiment_dir = os.path.join(output_dir, f"shift_{shift_type}")
     if not os.path.exists(experiment_dir):
@@ -607,10 +666,11 @@ def create_variability_summary1(results, output_file=None):
     return summary_df
 
 if __name__ == "__main__":
+    
     import os
     import glob
     from sklearn.preprocessing import LabelEncoder
-
+    
     """
     Choose which data to use: 'real data' or 'synthetic data'
     Names of parametres to set:
@@ -641,7 +701,7 @@ if __name__ == "__main__":
         all_results = {}
         fl = 1
         if fl == 1:
-            for i in ['MagicTelescope_fConc_']:
+            for i in ['MagicTelescope_fConc1_']:
                 dataset_name = i
                 source_file = f'source/{dataset_name}.csv'
                 target_file = f'target/{dataset_name}.csv'
@@ -693,7 +753,7 @@ if __name__ == "__main__":
 
         # Prepare list of datasets
         datasets = []
-        for dataset_name in ['MagicTelescope_fConc_']:
+        for dataset_name in ['MagicTelescope_fConc1_']:
             source_file = f'source/{dataset_name}.csv'
             datasets.append({
                 'name': dataset_name,
