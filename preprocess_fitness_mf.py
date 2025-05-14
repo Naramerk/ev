@@ -202,7 +202,7 @@ def generate_synthetic_data(
     except Exception as e:
         print(f"Error training GMM model: {e}")
         gmm = None
-    
+    # !!! add fitting dm here (fitting + creating 100 individuals)
     # Для row_bn создаем пул байесовских сетей (bns)
     bns = []
     if mutation_type == 'row_bn':
@@ -266,10 +266,11 @@ def generate_synthetic_data(
         except Exception as e:
             print(f"Error initializing Bayesian Networks: {e}")
             bns = []
+        
     # Setup functions for the genetic algorithm
     def create_individual():
-        """Create an individual by copying the source data with some noise"""
-        # Add small noise to avoid identical individuals
+        """Create an individual"""
+        # !!! ind data as a sample from dm (as 1 of created indivs)
         noise = np.random.normal(0, 0.01, source_np.shape)
         individual_data = source_np.copy() + noise
         individual_data = np.nan_to_num(individual_data)
